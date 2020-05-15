@@ -308,16 +308,22 @@ there is more than one frame."
   (update-border-all-screens)
   t)
 
+
+
+(define-condition font-not-found (error)
+  ((font-name :initarg :font-name :reader :font-name)))
+
 (defun set-font (font)
   "Set the font(s) for the message bar and input bar."
-  (when (if (listp font)
-            (every #'identity (mapcar #'font-exists-p font))
-            (font-exists-p font))
+  (let ((font-list (ensure-list font)))
+    (loop for font in font-list do
+      (unless (font-exists-p font))
+      (error 'font-not-found
+             :font-name font))
     (dolist (screen *screen-list*)
-      (let ((fonts (if (listp font)
-                       (mapcar (lambda (font) (open-font *display* font))
-                               font)
-                       (list (open-font *display* font)))))
+      (let ((fonts
+              (mapcar (lambda (font) (open-font *display* font))
+                      font-list)))
         (mapc #'close-font (screen-fonts screen))
         (setf (screen-fonts screen) fonts)))
     t))
